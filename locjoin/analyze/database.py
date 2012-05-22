@@ -5,7 +5,7 @@ import locjoin.settings as settings
 
 db = create_engine(settings.DBURI)
 db_session = scoped_session(sessionmaker(autocommit=False,
-                                         autoflush=False,
+                                         autoflush=True,
                                          bind=db))
 Base = declarative_base()
 Base.query = db_session.query_property()

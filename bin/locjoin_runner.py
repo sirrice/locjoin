@@ -5,6 +5,8 @@ from dbtruck.dbtruck import import_datafiles
 from dbtruck.exporters.pg import PGMethods
 
 from locjoin.util import check_job_table
+from locjoin.tasks import *
+from locjoin.analyze.models import *
 from locjoin.analyze.analyze import run_state_machine
 from locjoin.analyze.fuzzyjoin import recompute_correlations, compute_pairwise_correlations
 
@@ -14,8 +16,6 @@ def main(db, session):
     while True:
         rows = session.execute('select * from __dbtruck_jobs__ limit 1').fetchall()
         for id, fname, argstxt, kwargstxt in rows:
-            session.execute('delete from __dbtruck_jobs__ where id = :id', {'id' : id})
-            session.commit()
             try:
                 args = pickle.loads(str(argstxt))
             except Exception as e:
@@ -28,24 +28,30 @@ def main(db, session):
             print fname
             print args
             print kwargs
+            
             try:
                 if fname == 'add_table':
-                    add_table(*args, **kwargs)
+                    _add_table(*args, **kwargs)
                 elif fname == 'execute_state_machine':
-                    execute_state_machine(db, *args, **kwargs)
+                    _execute_state_machine(db, session, *args, **kwargs)
                 elif fname == 'update_annotations':
-                    update_annotations(db, session, *args, **kwargs)
+                    _update_annotations(db, session, *args, **kwargs)
                 elif fname == 'recompute_corr_pairs':
-                    recompute_corr_pairs(db, session, *args, **kwargs)
+                    _recompute_corr_pairs(db, session, *args, **kwargs)
+
+                print "deleting task", id
+                session.execute('delete from __dbtruck_jobs__ where id = :id', {'id' : id})
+                session.commit()
             except:
                 import traceback
                 traceback.print_exc()
+                session.rollback()
                 
         time.sleep(0.5)
 
 
 
-def add_table(url, name):
+def _add_table(url, name):
     try:
         import_datafiles([url], True, name, None,  PGMethods,
                          **settings.DBSETTINGS)
@@ -53,14 +59,21 @@ def add_table(url, name):
         import traceback
         traceback.print_exc()
 
-def execute_state_machine(db, tablename):
+def _execute_state_machine(db, db_session, tablename):
     run_state_machine(db, tablename)
 
-    recompute_corr_pairs(db, tablename)
+    recompute_corr_pairs(db_session, tablename)
 
-def update_annotations(db, db_session, tablename, newannotations):
+def _update_annotations(db, db_session, tablename, newannosargs):
     session = db_session
     tablemd = Metadata.load_from_tablename(db, tablename)
+
+    newannos = []
+    for name, ltype, extractor, annotype in newannosargs:
+        anno = Annotation(name, ltype, extractor, tablemd,
+                          annotype=annotype,
+                          user_set=True)
+        newannos.append(anno)
 
     tablemd.state = 0
     
@@ -69,9 +82,9 @@ def update_annotations(db, db_session, tablename, newannotations):
     session.add(tablemd)
     session.commit()
 
-    execute_state_machine(db, tablename)
+    execute_state_machine(db_session, tablename)
 
-def recompute_corr_pairs(db, db_session, tablename):
+def _recompute_corr_pairs(db, db_session, tablename):
     recompute_correlations(db, db_session, tablename)
 
 

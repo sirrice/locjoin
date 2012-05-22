@@ -147,6 +147,7 @@ def run_state_machine(db, tablename):
 
 
 def execute_state_0(db, tablemd, schema):
+    print "state 0\t", tablemd.tablename
     cols = schema.columns.keys()    
 
     if '_latlon' not in cols and '_address' not in cols:
@@ -159,6 +160,7 @@ def execute_state_0(db, tablemd, schema):
 
 def execute_state_1(db, tablemd, schema):
     "annotype -> [(column, extractorname)]"
+    print "state 1\t", tablemd.tablename
     extractors = find_location_extractors(db, tablemd, schema)
     annos = []
     for anntype, pairs in extractors.iteritems():
@@ -174,6 +176,7 @@ def execute_state_1(db, tablemd, schema):
 
 def execute_state_2(db, tablemd, schema):
     "fill in the shadow columns"
+    print "state 2\t", tablemd.tablename
     needs_geocoding = populate_shadow_cols(db, tablemd, schema)
     tablemd.state = 3 if needs_geocoding else 5
     db_session.add(tablemd)
@@ -183,6 +186,8 @@ def execute_state_2(db, tablemd, schema):
 
 def execute_state_3(db, tablemd, schema):
     "geocode the table"
+
+    print "state 3\t", tablemd.tablename
     maxid = geocode_table(db, tablemd)
     try:
         if maxid == db.execute('select max(id) from %s' % tablemd.tablename).fetchone()[0]:
@@ -225,26 +230,25 @@ def geocode_table(db, tablemd):
             break
 
         rows = [dict(zip(cols, row)) for row in rows]
-        addresses = [data.get('_address', '') for row in rows]
+        addresses = [row.get('_address', '') for row in rows]
         restrictions = [construct_restriction(user_input, row)
                         for row in rows]
-
-        rid = rows[-1]['id']
-        maxid = rid if not maxid or rid > maxid else maxid
+        rids = (row['id'] for row in rows)
+        geocodes = __geocoder__.geocode_block(zip(addresses, restrictions))
 
         
-        for result in __geocoder__.geocode_block(zip(addresses, restrictions)):
+        for rid, result in zip(rids, geocodes):
             if not result:
                 continue
 
             description, (lat, lon), query = result
+            print "geocoded\t", query, lat, lon            
 
             q = """update %s set _latlon = point(%%s, %%s), _query = %%s,
                   _description = %%s, _geocoded = true 
                   where id = %%s""" % tablename
             db.execute(q, [lat, lon, query, description, rid])
-
-
+            maxid = rid if not maxid or rid > maxid else maxid
 
         # XXX: this is a huge hack to ensure that location join
         # module will re-compute the correlations because we
@@ -302,6 +306,7 @@ def populate_shadow_cols(db, tablemd, schema):
         for cn, cd in zip(colnames, coldatas):
             cd = [ re_badchar.sub(' ', to_utf(v)).lower().strip() for v in cd if v]
             annos = annotations[cn]
+
             for loctype, extractor in annos:
                 extracted = map(extractor, cd)
                 if loctype == 'latlon':
@@ -350,6 +355,7 @@ def save_shadow(db, tablename, ids, shadow_data):
 def find_location_extractors(db, tablemd, schema):
     tablename = tablemd.tablename
     colnames = schema.columns.keys()
+    colnames = filter(lambda c: not c.startswith('_'), colnames)
 
     arg = ','.join(colnames)
     rows = db.execute("""select %s from %s
