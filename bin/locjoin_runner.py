@@ -66,7 +66,7 @@ def _execute_state_machine(db, db_session, tablename):
 
 def _update_annotations(db, db_session, tablename, newannosargs):
     session = db_session
-    tablemd = Metadata.load_from_tablename(db, tablename)
+    tablemd = Metadata.load_from_tablename(db_session, tablename)
 
     newannos = []
     for name, ltype, extractor, annotype in newannosargs:
