@@ -9,7 +9,6 @@ import traceback
 import locjoin.settings as settings
 sys.path.extend(['..', '.', '../exporters'])
 
-from celery.task import task
 from operator import add, and_
 from collections import defaultdict
 from sqlalchemy import *
