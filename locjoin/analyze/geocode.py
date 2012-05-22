@@ -55,7 +55,7 @@ class DBTruckGeocoder(object):
             if locs:
                 if rlocs:
                     restriction_latlon = rlocs[0][1]
-                    locs.sort(key=lambda loc: distance_func(loc[1], restriction_latlon))
+                    locs = sorted(locs, key=lambda loc: distance_func(loc[1], restriction_latlon))
 
                 description, (lat, lon) = locs[0]
                 query = self.get_format_string(restriction) % address
@@ -93,7 +93,7 @@ class DBTruckGeocoder(object):
 
         if query in self.cache:
             try:
-                return list(pickle.loads(self.cache[query]))
+                return pickle.loads(self.cache[query])
             except:
                 pass
         
