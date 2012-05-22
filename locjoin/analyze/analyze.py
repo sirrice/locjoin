@@ -50,19 +50,19 @@ drop _geocoded
 
 
 
-def reset_system(db):
-    drop_shadows(db)
-    delete_metadata(db)
-    reset_metadata(db)
+def reset_system(db, db_session):
+    drop_shadows(db, db_session)
+    delete_metadata(db, db_session)
+    reset_metadata(db, db_session)
     
-def drop_shadows(db):
+def drop_shadows(db, db_session):
     print "resetting system"
     meta = MetaData(db)
     meta.reflect()
     for tablename, schema in meta.tables.items():
         try:
             db.execute(DROPSHADOW % tablename)
-            tablemd = Metadata.load_from_tablename(db, tablename)
+            tablemd = Metadata.load_from_tablename(db_session, tablename)
             tablemd.state = 0
             db_session.add(tablemd)
             db_session.commit()
@@ -83,7 +83,7 @@ def delete_metadata(db):
     
 
 
-def run_location_extractor(db, filter=None):
+def run_location_extractor(db, db_session, filter=None):
     """
     Entry point for analyzing existing tables in database and
     extracting locations
@@ -100,7 +100,7 @@ def run_location_extractor(db, filter=None):
             continue
 
         try:
-            result = run_state_machine(db, tablename)
+            result = run_state_machine(db, db_session, tablename)
             results.append(result)
         except:
             raise
@@ -111,7 +111,7 @@ def run_location_extractor(db, filter=None):
     
 
 
-def run_state_machine(db, tablename):
+def run_state_machine(db, db_session, tablename):
     """
     Execute a state machine to analyze and extract location data from
     a single table
@@ -119,7 +119,7 @@ def run_state_machine(db, tablename):
     meta = MetaData(db)
     meta.reflect()
     schema = meta.tables[tablename]
-    tablemd = Metadata.load_from_tablename(db, tablename)
+    tablemd = Metadata.load_from_tablename(db_session, tablename)
     
 
     cols = schema.columns.keys()
@@ -381,7 +381,7 @@ def add_constant_annotation(tablemd, loctype, colname):
     db_session.add(Annotation(colname, loctype, 'parse_default', tablemd, user_set=True))
 
 if __name__ == '__main__':
-    from database import db
+    from database import db, db_session
     #drop_shadows(db)
     #delete_metadata(db)
     #reset_system(db)    
@@ -393,7 +393,7 @@ if __name__ == '__main__':
     sleeptime = 10
     states = None
     while True:
-        new_states = run_location_extractor(db, filter=f)
+        new_states = run_location_extractor(db, db_session, filter=f)
         print new_states, states
         if states != None:
             changed = False

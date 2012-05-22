@@ -5,7 +5,7 @@ from sqlalchemy.orm import *
 import sqlalchemy.types as types
 from sqlalchemy.ext.declarative import *
 
-from database import Base, db_session
+from database import Base
 from location import *        
 
 class Metadata(Base):
@@ -40,7 +40,7 @@ class Metadata(Base):
         
             
     @staticmethod
-    def load_from_tablename(db, tablename):
+    def load_from_tablename(db_session, tablename):
         try:
             tablemd = db_session.query(Metadata).filter(Metadata.tablename == tablename).all()[0]
         except:

@@ -60,7 +60,7 @@ def _add_table(url, name):
         traceback.print_exc()
 
 def _execute_state_machine(db, db_session, tablename):
-    run_state_machine(db, tablename)
+    run_state_machine(db, db_session, tablename)
 
     recompute_corr_pairs(db_session, tablename)
 

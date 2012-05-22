@@ -67,7 +67,7 @@ def get_correlations(db, db_session):#, t1, t2):
                 print 'skipping', tablename1 ,tablename2
                 continue
             print "analyzing", tablename1, tablename2
-            for cp in compute_pairwise_correlations(db, tablename1, tablename2):
+            for cp in compute_pairwise_correlations(db, db_session, tablename1, tablename2):
                 db_session.add(cp)
                 db_session.commit()
                 res.append(cp)
@@ -79,7 +79,7 @@ def recompute_correlations(db, db_session, tablename):
     meta.reflect()
     tablenames = meta.tables.keys()
 
-    tablemds = [Metadata.load_from_tablename(db, tn) for tn in tablenames]
+    tablemds = [Metadata.load_from_tablename(db_session, tn) for tn in tablenames]
     tablemds = filter(lambda md: md.state >= 3, tablemds)
 
     tablestats = [compute_table_stats(db, tmd.tablename) for tmd in tablemds]
@@ -95,7 +95,7 @@ def recompute_correlations(db, db_session, tablename):
                 continue
 
             print "analyzing:", tablename1, tablename2
-            for cp in compute_pairwise_correlations(db, tablename1, tablename2):
+            for cp in compute_pairwise_correlations(db, db_session, tablename1, tablename2):
                 db_session.add(cp)
                 db_session.commit()
 
@@ -120,11 +120,11 @@ def compute_table_stats(db, tablename):
     bshape = has_shape(db, tablename)
     return tablename, radius, bshape
 
-def compute_pairwise_correlations(db, tablename1, tablename2, join_func=None):
+def compute_pairwise_correlations(db, db_session, tablename1, tablename2, join_func=None):
     stats1 = compute_table_stats(db, tablename1)
     stats2 = compute_table_stats(db, tablename2)
-    tmd1 = Metadata.load_from_tablename(db, tablename1)
-    tmd2 = Metadata.load_from_tablename(db, tablename2)
+    tmd1 = Metadata.load_from_tablename(db_session, tablename1)
+    tmd2 = Metadata.load_from_tablename(db_session, tablename2)
 
     r1, s1 = stats1[1:]
     r2, s2 = stats2[1:]
