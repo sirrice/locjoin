@@ -6,6 +6,7 @@ import random
 
 from geopy import geocoders
 
+from locjoin.settings import settings
 from locjoin.util import to_utf
 
 re_addr2 = re.compile(r'^\s*\d{1,6}(\s+[a-zA-Z\-]+){1,3}\s*$')
@@ -119,7 +120,7 @@ class DBTruckGeocoder(object):
                 result = []
 
         self.cache[query] = pickle.dumps(result)
-        return result
+        return list(result)
 
 if __name__ == '__main__':
     geocoder = DBTruckGeocoder()
