@@ -93,7 +93,7 @@ class DBTruckGeocoder(object):
 
         if query in self.cache:
             try:
-                return pickle.loads(self.cache[query])
+                return list(pickle.loads(self.cache[query]))
             except:
                 pass
         
