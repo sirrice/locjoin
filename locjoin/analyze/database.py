@@ -26,7 +26,6 @@ def init_db():
     metadata.tables = dict([(k.__tablename__, k.__table__)
                             for k in classes])
     metadata.create_all()
-    return Base
 
 
 def new_db(autocommit=True):
