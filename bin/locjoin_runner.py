@@ -92,7 +92,7 @@ def main_runner(db, session, processes):
             
             try:
                 npending += 1
-                p = Process(target=execute_function, args=(db ,session, fname, args, kwargs, id, queue))
+                p = Process(target=execute_function, args=(fname, args, kwargs, id, queue))
                 processes[id] = p
                 p.start()                
             except KeyboardInterrupt:
@@ -104,7 +104,10 @@ def main_runner(db, session, processes):
         time.sleep(0.5)
 
 
-def execute_function(db, session, fname, args, kwargs, task_id, queue):
+def execute_function(fname, args, kwargs, task_id, queue):
+    from locjoin.analyze.database import *
+    init_db()
+    session = db_session
     try:
         if fname == 'add_table':
             _add_table(*args, **kwargs)

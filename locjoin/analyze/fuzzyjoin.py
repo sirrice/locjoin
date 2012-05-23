@@ -133,7 +133,6 @@ def compute_pairwise_correlations(db, db_session, tablename1, tablename2, join_f
     join_func = join_func or dist_join
     joinres = join_func(db, tablename1, tablename2, r)
 
-
     ret = []
     for corr, statname, col1, col2 in test_correlation(joinres):
         agg1 = col1[2] if len(col1) > 2 else None
@@ -165,7 +164,9 @@ def test_correlation(join):
                     cd2 = [row[col2] for row in join]
                     cd1 = map(lambda v: v and float(v) or 0, cd1)
                     cd2 = map(lambda v: v and float(v) or 0, cd2)
+
                     corr = statfunc(cd1, cd2)
+
                     if math.isnan(corr):
                         continue
                     yield corr, statfunc.__name__, col1, col2
@@ -195,6 +196,7 @@ def mine_correlation(arr1, arr2):
 try:
     import xstats.MINE
     __statfuncs__ = [mine_correlation, pearson_correlation]
+    raise
 except:
     __statfuncs__ = [pearson_correlation]
     
