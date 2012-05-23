@@ -92,9 +92,11 @@ def main_runner(db, session, processes):
             
             try:
                 npending += 1
-                p = Process(target=execute_function, args=(fname, args, kwargs, id, queue))
-                processes[id] = p
-                p.start()                
+                processes[id] = id
+                execute_function(db, session, fname, args, kwargs, id, queue)
+                #p = Process(target=execute_function, args=(fname, args, kwargs, id, queue))
+                #processes[id] = p
+                #p.start()                
             except KeyboardInterrupt:
                 raise
             except:
@@ -103,15 +105,15 @@ def main_runner(db, session, processes):
         time.sleep(0.5)
 
 
-def execute_function(fname, args, kwargs, task_id, queue):
+def execute_function(db, session, fname, args, kwargs, task_id, queue):
     # from sqlalchemy import *
     # import locjoin.settings as settings
     # db = create_engine(settings.DBURI, isolation_level='serializable')
     # db_session = sessionmaker(autocommit=False,
     #                           autoflush=True,
     #                           bind=db)
-    from locjoin.analyze.database import new_db
-    db, session = new_db(False)
+    #from locjoin.analyze.database import new_db
+    #db, session = new_db(False)
     try:
         if fname == 'add_table':
             _add_table(session, *args, **kwargs)
@@ -175,9 +177,9 @@ def _recompute_corr_pairs(db, db_session, tablename):
 
 if __name__ == '__main__':
     
-    from locjoin.analyze.database import new_db
-    db, db_session = new_db()
-    #init_db()
+    from locjoin.analyze.database import *
+    #db, db_session = new_db()
+    init_db()
     check_job_table(db)
 
     db_session.execute('update __dbtruck_jobs__ set running = false where done = false')
