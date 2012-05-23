@@ -1,6 +1,7 @@
 import time
 import pickle
 import traceback
+import locjoin.settings as settings
 
 from multiprocessing import Process, Queue, Pool
 from Queue import Empty
