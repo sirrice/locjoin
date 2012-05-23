@@ -1,12 +1,12 @@
 GEOCACHEFILE = '/tmp/locjoin.geocache.db'
 
-DBURI = 'postgresql://localhost:5435/test'
+DBURI = 'postgresql://localhost:5432/test'
 
 DBSETTINGS = {
     'dbname' : 'test',
     'hostname' : 'localhost',
     'username' : 'sirrice',
-    'port' : 5435
+    'port' : 5432
     }
 
 

@@ -16,10 +16,30 @@ from locjoin.analyze.fuzzyjoin import recompute_correlations, compute_pairwise_c
 
 
 def main(db, session):
+    processes = {}    
+    try:
+        main_runner(db, session, processes)
+    except KeyboardInterrupt:
+        print "ctl-c detected.  killing processes"
+
+        for tid, p in processes.items():
+            try:
+                if p.is_alive():
+                    p.terminate()
+            except:
+                traceback.print_exc()
+    except:
+        traceback.print_exc()
+    print "goodbye"
+                
+            
+
+def main_runner(db, session, processes):
     npending = 0
     queue = Queue()
     timeout = 1
     process_limit = 5
+
 
 
     while True:
@@ -27,10 +47,12 @@ def main(db, session):
         # wait for results
         if npending > 0:
             try:
-                success, task_id = queue.get(True, timeout)
+                success, task_id, err = queue.get(False)
                 npending -= 1
                 print "task completed", task_id, success
+                del processes[task_id]
                 if not success:
+                    print err
                     print "setting running = false"                    
                     session.execute('update __dbtruck_jobs__ set running = false where id = :id',
                                     {'id' : task_id})
@@ -40,13 +62,8 @@ def main(db, session):
                                     {'id' : task_id})
                 session.commit()
             except Empty:
-                time.sleep(0.5)
-            except KeyboardInterrupt:
-                raise
-            except:
-                import traceback
-                traceback.print_exc()
-        
+                time.sleep(0.05)
+
         if npending > process_limit:
             continue
 
@@ -61,27 +78,33 @@ def main(db, session):
         for id, fname, args, kwargs in rows:
             try:
                 args = pickle.loads(str(args))
+            except KeyboardInterrupt:
+                raise
             except Exception as e:
                 args = []
 
             try:
                 kwargs = pickle.loads(str(kwargs))
+            except KeyboardInterrupt:
+                raise
             except:
                 kwargs = {}
             
             try:
                 npending += 1
-                p = Process(target=execute_function, args=(fname, args, kwargs, id, queue))
-                p.start()
+                p = Process(target=execute_function, args=(db ,session, fname, args, kwargs, id, queue))
+                processes[id] = p
+                p.start()                
+            except KeyboardInterrupt:
+                raise
             except:
-                import traceback
                 traceback.print_exc()
                 session.rollback()
                 
         time.sleep(0.5)
 
 
-def execute_function(fname, args, kwargs, task_id, queue):
+def execute_function(db, session, fname, args, kwargs, task_id, queue):
     try:
         if fname == 'add_table':
             _add_table(*args, **kwargs)
@@ -95,9 +118,11 @@ def execute_function(fname, args, kwargs, task_id, queue):
             print "wait", task_id
             time.sleep(5)
             print "wait done", task_id
-        queue.put((True, task_id))
+        queue.put((True, task_id, ''))
     except:
-        queue.put((False, task_id))
+        import traceback
+        err = traceback.format_exc()
+        queue.put((False, task_id, err))
 
 
 
@@ -144,4 +169,8 @@ if __name__ == '__main__':
     from locjoin.analyze.database import *
     init_db()
     check_job_table(db)
+
+    db_session.execute('update __dbtruck_jobs__ set running = false where done = false')
+    db_session.commit()
+    
     main(db, db_session)

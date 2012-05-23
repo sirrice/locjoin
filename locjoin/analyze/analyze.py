@@ -13,6 +13,7 @@ from operator import add, and_
 from collections import defaultdict
 from sqlalchemy import *
 from locjoin.util import to_utf
+from locjoin.tasks import recompute_corr_pairs
 
 from geocode import DBTruckGeocoder
 from database import init_db, db_session
@@ -137,7 +138,7 @@ def run_state_machine(db, db_session, tablename):
 
     if tablemd.state == 3 or tablemd.state == 4:
         # check if table has annotations and no geocode/shapes
-        execute_state_3(db, tablemd, schema)
+        execute_state_3(db, db_session, tablemd, schema)
         
     if tablemd.state == 5:
         return tablemd.state
@@ -183,11 +184,11 @@ def execute_state_2(db, tablemd, schema):
     return tablemd.state
 
 
-def execute_state_3(db, tablemd, schema):
+def execute_state_3(db, db_session, tablemd, schema):
     "geocode the table"
 
     print "state 3\t", tablemd.tablename
-    maxid = geocode_table(db, tablemd)
+    maxid = geocode_table(db, db_session, tablemd)
     try:
         if maxid == db.execute('select max(id) from %s' % tablemd.tablename).fetchone()[0]:
             tablemd.state = 5
@@ -198,7 +199,7 @@ def execute_state_3(db, tablemd, schema):
     return tablemd.state
 
 
-def geocode_table(db, tablemd):
+def geocode_table(db, db_session, tablemd):
     """
       check what most precise locations annotation is
       (latlon/address/city/county/zip/state/country)
@@ -222,9 +223,11 @@ def geocode_table(db, tablemd):
 
     maxid = None
     idx = 0
+    start = time.time()
 
+    
     while True:
-        rows = resproxy.fetchmany(500)
+        rows = resproxy.fetchmany(50)
         if not rows:
             break
 
@@ -249,12 +252,10 @@ def geocode_table(db, tablemd):
             db.execute(q, [lat, lon, query, description, rid])
             maxid = rid if not maxid or rid > maxid else maxid
 
-        # XXX: this is a huge hack to ensure that location join
-        # module will re-compute the correlations because we
-        # have more location information
-        q = """delete from __dbtruck_corrpair__ where table1 =
-        %s or table2 = %s"""
-        db.execute(q, [tablename, tablename])
+        if (time.time() - start) > 10:
+            recompute_corr_pairs(db_session, tablename)
+            start = time.time()
+
 
     return maxid
 
