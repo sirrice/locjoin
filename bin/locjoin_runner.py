@@ -61,7 +61,6 @@ def main_runner(db, session, processes):
                     print "setting done = true, running = false"
                     session.execute('update __dbtruck_jobs__ set done = true, running = false where id = :id',
                                     {'id' : task_id})
-                session.commit()
             except Empty:
                 time.sleep(0.05)
 
@@ -75,7 +74,7 @@ def main_runner(db, session, processes):
                            where dj2.running = false and done = false)
                 returning id, fname, args, kwargs;"""
         rows = session.execute(q).fetchall()
-        session.commit()
+
         for id, fname, args, kwargs in rows:
             try:
                 args = pickle.loads(str(args))
@@ -112,8 +111,7 @@ def execute_function(fname, args, kwargs, task_id, queue):
     #                           autoflush=True,
     #                           bind=db)
     from locjoin.analyze.database import new_db
-    db, session = new_db()
-    session = db_session
+    db, session = new_db(False)
     try:
         if fname == 'add_table':
             _add_table(session, *args, **kwargs)
@@ -166,7 +164,6 @@ def _update_annotations(db, db_session, tablename, newannosargs):
     map(session.delete, tablemd.annotations)
     session.add_all(newannos)
     session.add(tablemd)
-    session.commit()
 
     execute_state_machine(db_session, tablename)
 
@@ -184,6 +181,5 @@ if __name__ == '__main__':
     check_job_table(db)
 
     db_session.execute('update __dbtruck_jobs__ set running = false where done = false')
-    db_session.commit()
     
     main(db, db_session)

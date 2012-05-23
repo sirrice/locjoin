@@ -114,7 +114,7 @@ def correlation_exists(db, t1, t2):
         return False
 
 def compute_table_stats(db_session, tablename):
-    radius = compute_radius(db, tablename)
+    radius = compute_radius(db_session, tablename)
     if radius == None:
         return None
     bshape = has_shape(db_session, tablename)
@@ -436,7 +436,7 @@ def compute_radius(db_session, table):
     try:
         q = """select stddev(_latlon[0]), stddev(_latlon[1])
         from %s where _latlon is not null""" % table
-        latstd, lonstd = db.execute(q).fetchone()
+        latstd, lonstd = db_session.execute(q).fetchone()
         #return 0.063 * (latstd + lonstd) / 2.
         return 0.03 * (latstd + lonstd) / 2.
     except:

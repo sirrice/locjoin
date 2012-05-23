@@ -32,9 +32,9 @@ def init_db():
     return Base
 
 
-def new_db():
+def new_db(autocommit=True):
     db = create_engine(settings.DBURI, isolation_level='READ COMMITTED')
-    db_session = scoped_session(sessionmaker(autocommit=False,
+    db_session = scoped_session(sessionmaker(autocommit=autocommit,
                                              autoflush=True,
                                              bind=db))
     Base = declarative_base()
