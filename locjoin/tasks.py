@@ -23,11 +23,14 @@ def update_annotations(session, tablename, newannosargs):
 def recompute_corr_pairs(session, tablename):
     add_job(session, 'recompute_corr_pairs', [tablename], {})
 
+def wait(session):
+    add_job(session, 'wait', [], {})
+
 if __name__ == '__main__':
     from locjoin.analyze.database import *
     check_job_table(db)
-    #recompute_corr_pairs(db, 'underweight')
-    args = [u'homicide2', [('regioncounty', u'address', 'parse_default', 0), (u'New York', '_userinput_', 'parse_default', 1)]]
-    update_annotations(db_session, *args)
-    #add_table(db_session, 'http://www.health.ny.gov/statistics/chac/mortality/homici.htm', 'homicide')
-
+    args = [u'homicide2', [('regioncounty', u'address', 'parse_default', 0),
+                           (u'New York', '_userinput_', 'parse_default', 1)]]
+    #update_annotations(db_session, *args)
+    for i in xrange(10):
+        wait(db_session)

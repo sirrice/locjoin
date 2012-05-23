@@ -7,7 +7,9 @@ def check_job_table(db):
           id serial,
           fname varchar(128),
           args text null,
-          kwargs text null
+          kwargs text null,
+          running bool default false,
+          done bool default false
         )        
         """
         db.execute(q)
