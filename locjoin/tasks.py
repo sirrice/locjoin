@@ -26,10 +26,13 @@ def recompute_corr_pairs(session, tablename):
 def wait(session):
     add_job(session, 'wait', [], {})
 
+def crash(session):
+    add_job(session, 'crash', [], {})
+
 if __name__ == '__main__':
     from locjoin.analyze.database import *
     check_job_table(db)
-    recompute_corr_pairs(db_session, 'urbanpop')
+    #recompute_corr_pairs(db_session, 'urbanpop')
     #update_annotations(db_session, *args)
-    #for i in xrange(10):
-    #    wait(db_session)
+    for i in xrange(10):
+        crash(db_session)

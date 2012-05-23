@@ -9,7 +9,8 @@ def check_job_table(db):
           args text null,
           kwargs text null,
           running bool default false,
-          done bool default false
+          done bool default false,
+          lastrun timestamp default current_timestamp
         )        
         """
         db.execute(q)

@@ -43,26 +43,31 @@ def main_runner(db, session, processes):
 
 
     while True:
+        try:
+            # wait for results
+            if npending > 0:
+                try:
+                    success, task_id, err = queue.get(False)
+                    npending -= 1
+                    print "task completed", task_id, success
 
-        # wait for results
-        if npending > 0:
-            try:
-                success, task_id, err = queue.get(False)
-                npending -= 1
-                print "task completed", task_id, success
-                del processes[task_id]
-                if not success:
-                    print err
-                    print "setting running = false"                    
-                    session.execute('update __dbtruck_jobs__ set running = false where id = :id',
-                                    {'id' : task_id})
-                else:
-                    print "setting done = true, running = false"
-                    session.execute('update __dbtruck_jobs__ set done = true, running = false where id = :id',
-                                    {'id' : task_id})
-                session.commit()
-            except Empty:
-                time.sleep(0.05)
+                    if not success:
+                        print err
+                        print "setting running = false"                    
+                        session.execute('update __dbtruck_jobs__ set running = false where id = :id',
+                                        {'id' : task_id})
+                    else:
+                        print "setting done = true, running = false"
+                        session.execute('update __dbtruck_jobs__ set done = true, running = false where id = :id',
+                                        {'id' : task_id})
+                    session.commit()
+                    del processes[task_id]
+
+                except Empty:
+                    time.sleep(0.05)
+        except Exception as e:
+            print e
+            continue
 
         if npending > process_limit:
             continue
@@ -70,14 +75,16 @@ def main_runner(db, session, processes):
         try:
             q = """update __dbtruck_jobs__
                    set running = true,
-                   id = (select max(dj3.id)+1 from __dbtruck_jobs__ as dj3)
-                   where id = (select min(dj2.id)
+                   lastrun = current_timestamp
+                   where id = (select dj2.id
                                from __dbtruck_jobs__ as dj2
-                               where dj2.running = false and done = false)
+                               where dj2.running = false and done = false
+                               order by lastrun asc limit 1)
                     returning id, fname, args, kwargs;"""
             rows = session.execute(q).fetchall()
             session.commit()
-        except:
+        except Exception as e:
+            print e
             time.sleep(0.1)
             continue
 
@@ -133,6 +140,9 @@ def execute_function(db, session, fname, args, kwargs, task_id, queue):
             print "wait", task_id
             time.sleep(5)
             print "wait done", task_id
+        elif fname == 'crash':
+            time.sleep(2)
+            raise RuntimeException("crashed")
         queue.put((True, task_id, ''))
     except:
         import traceback
