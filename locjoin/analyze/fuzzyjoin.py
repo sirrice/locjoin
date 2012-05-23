@@ -290,7 +290,7 @@ def loc_join_2(db, t1, t2, r1):
     cols = [(t1, c) for c in t1cols] + [(t2, c) for c in t2cols]
     q = """select %s from %s, %s where
      circle(point(%s.latitude, %s.longitude), %%s) &&
-     %s.shape""" % (','.join(sels), t1, t2, t1, t1, t2)
+     %s._shape""" % (','.join(sels), t1, t2, t1, t1, t2)
     
     res = db.execute(q, (r1, )).fetchall()
     return [dict(zip(cols, row)) for row in res]    
@@ -445,7 +445,7 @@ def compute_radius(db_session, table):
 
 def has_shape(db_session, table):
     try:
-        q = "select count(*) from %s where shape is not null" % table
+        q = "select count(*) from %s where _shape is not null" % table
         res = db_session.execute(q)
         return res.fetchone()[0] > 0
     except:
