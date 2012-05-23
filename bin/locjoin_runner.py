@@ -23,12 +23,12 @@ def main(db, session):
     except KeyboardInterrupt:
         print "ctl-c detected.  killing processes"
 
-        for tid, p in processes.items():
-            try:
-                if p.is_alive():
-                    p.terminate()
-            except:
-                traceback.print_exc()
+        # for tid, p in processes.items():
+        #     try:
+        #         if p.is_alive():
+        #             p.terminate()
+        #     except:
+        #         traceback.print_exc()
     except:
         traceback.print_exc()
     print "goodbye"
@@ -67,14 +67,19 @@ def main_runner(db, session, processes):
         if npending > process_limit:
             continue
 
-        q = """update __dbtruck_jobs__
-               set running = true
-               where id = (select min(dj2.id)
-                           from __dbtruck_jobs__ as dj2
-                           where dj2.running = false and done = false)
-                returning id, fname, args, kwargs;"""
-        rows = session.execute(q).fetchall()
-        session.commit()
+        try:
+            q = """update __dbtruck_jobs__
+                   set running = true,
+                   id = (select max(dj3.id)+1 from __dbtruck_jobs__ as dj3)
+                   where id = (select min(dj2.id)
+                               from __dbtruck_jobs__ as dj2
+                               where dj2.running = false and done = false)
+                    returning id, fname, args, kwargs;"""
+            rows = session.execute(q).fetchall()
+            session.commit()
+        except:
+            time.sleep(0.1)
+            continue
 
         for id, fname, args, kwargs in rows:
             try:
