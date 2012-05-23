@@ -38,6 +38,7 @@ class DBTruckGeocoder(object):
             try:
                 yield self.geocode(address, restriction)
             except Exception as e:
+                print e
                 e = str(e).lower()
                 if 'limit' in e or 'rate' in e:
                     delay *= 1.1
@@ -61,8 +62,6 @@ class DBTruckGeocoder(object):
                 query = self.get_format_string(restriction) % address
 
                 return description, (lat, lon), query
-        except KeyboardInterrupt:
-            return None
         except Exception as e:
             raise
         return None
