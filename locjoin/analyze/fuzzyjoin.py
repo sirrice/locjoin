@@ -51,10 +51,10 @@ def get_correlations(db, db_session):#, t1, t2):
     meta.reflect()
     tablenames = meta.tables.keys()
 
-    tablemds = [Metadata.load_from_tablename(db, tn) for tn in tablenames]
+    tablemds = [Metadata.load_from_tablename(db_session, tn) for tn in tablenames]
     tablemds = filter(lambda md: md.state >= 3, tablemds)
 
-    tablestats = [compute_table_stats(db, tmd.tablename) for tmd in tablemds]
+    tablestats = [compute_table_stats(db_session, tmd.tablename) for tmd in tablemds]
     tablestats = filter(lambda s:s, tablestats)
     tablestats.sort()
 
@@ -82,7 +82,7 @@ def recompute_correlations(db, db_session, tablename):
     tablemds = [Metadata.load_from_tablename(db_session, tn) for tn in tablenames]
     tablemds = filter(lambda md: md.state >= 3, tablemds)
 
-    tablestats = [compute_table_stats(db, tmd.tablename) for tmd in tablemds]
+    tablestats = [compute_table_stats(db_session, tmd.tablename) for tmd in tablemds]
     tablestats = filter(lambda s:s, tablestats)
     tablestats.sort()
 
@@ -113,16 +113,16 @@ def correlation_exists(db, t1, t2):
         print e
         return False
 
-def compute_table_stats(db, tablename):
+def compute_table_stats(db_session, tablename):
     radius = compute_radius(db, tablename)
     if radius == None:
         return None
-    bshape = has_shape(db, tablename)
+    bshape = has_shape(db_session, tablename)
     return tablename, radius, bshape
 
 def compute_pairwise_correlations(db, db_session, tablename1, tablename2, join_func=None):
-    stats1 = compute_table_stats(db, tablename1)
-    stats2 = compute_table_stats(db, tablename2)
+    stats1 = compute_table_stats(db_session, tablename1)
+    stats2 = compute_table_stats(db_session, tablename2)
     tmd1 = Metadata.load_from_tablename(db_session, tablename1)
     tmd2 = Metadata.load_from_tablename(db_session, tablename2)
 
@@ -429,7 +429,7 @@ def aggregate_loc_join_3(db, t1, t2):
 
 
 
-def compute_radius(db, table):
+def compute_radius(db_session, table):
     """Computing radius sizes for a table"""
     # ath.erf(0.063 / (2 ** 0.5))
     # 5% of distribution falls within 0.063 * stddev
@@ -440,13 +440,16 @@ def compute_radius(db, table):
         #return 0.063 * (latstd + lonstd) / 2.
         return 0.03 * (latstd + lonstd) / 2.
     except:
+        db_session.rollback()
         return None
 
-def has_shape(db, table):
+def has_shape(db_session, table):
     try:
         q = "select count(*) from %s where shape is not null" % table
-        return db.execute(q).fetchone()[0] > 0
+        res = db_session.execute(q)
+        return res.fetchone()[0] > 0
     except:
+        db_session.rollback()
         return False
 
 

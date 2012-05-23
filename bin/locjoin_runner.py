@@ -41,6 +41,7 @@ def main_runner(db, session, processes):
     process_limit = 5
 
 
+    session.execute('set transaction isolation level repeatable read')
 
     while True:
 
@@ -115,7 +116,7 @@ def execute_function(fname, args, kwargs, task_id, queue):
     session = db_session
     try:
         if fname == 'add_table':
-            _add_table(*args, **kwargs)
+            _add_table(session, *args, **kwargs)
         elif fname == 'execute_state_machine':
             _execute_state_machine(db, session, *args, **kwargs)
         elif fname == 'update_annotations':
@@ -134,13 +135,15 @@ def execute_function(fname, args, kwargs, task_id, queue):
 
 
 
-def _add_table(url, name):
+def _add_table(session, url, name):
     try:
         import_datafiles([url], True, name, None,  PGMethods,
                          **settings.DBSETTINGS)
     except:
         import traceback
         traceback.print_exc()
+
+    execute_state_machine(db_session, name)
 
 def _execute_state_machine(db, db_session, tablename):
     run_state_machine(db, db_session, tablename)
