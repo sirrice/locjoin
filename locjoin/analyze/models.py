@@ -134,10 +134,10 @@ class CorrelationPair(Base):
         self.md2 = md2
 
     def __unicode__(self):
-        left = '%s.%s' % (self.md1.tablename,self.col1)
+        left = '%s.%s' % (self.table1,self.col1)
         if self.agg1:
             left = '%s(%s)' % (self.agg1, left)
-        right = '%s.%s' % (self.md2.tablename,self.col2)
+        right = '%s.%s' % (self.table2,self.col2)
         if self.agg2:
             right = '%s(%s)' % (self.agg2, right)
         return ' '.join([left, right, str(self.corr)])

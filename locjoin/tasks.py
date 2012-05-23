@@ -29,9 +29,7 @@ def wait(session):
 if __name__ == '__main__':
     from locjoin.analyze.database import *
     check_job_table(db)
-    args = [u'homicide2', [('regioncounty', u'address', 'parse_default', 0),
-                           (u'New York', '_userinput_', 'parse_default', 1)]]
-    recompute_corr_pairs(db_session, 'homicide2')
+    recompute_corr_pairs(db_session, 'urbanpop')
     #update_annotations(db_session, *args)
     #for i in xrange(10):
     #    wait(db_session)

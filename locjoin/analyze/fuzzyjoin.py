@@ -86,9 +86,13 @@ def recompute_correlations(db, db_session, tablename):
     tablestats = filter(lambda s:s, tablestats)
     tablestats.sort()
 
-    q = "delete from __dbtruck_corrpair__ where table1 = %s or table2 = %s"
-    db.execute(q, [tablename, tablename])
-
+    cp1s = db_session.query(CorrelationPair).filter(CorrelationPair.table1 == tablename)
+    cp2s = db_session.query(CorrelationPair).filter(CorrelationPair.table1 == tablename)
+    for cp in cp1s.union_all(cp2s).all():
+        db_session.delete(cp)
+    db_session.commit()
+    
+    cps = []
     for idx, (tablename1, r1, s1) in enumerate(tablestats):
         for tablename2, r2, s2 in tablestats[idx+1:]:
             if tablename1 != tablename and tablename2 != tablename:
@@ -96,8 +100,10 @@ def recompute_correlations(db, db_session, tablename):
 
             print "analyzing:", tablename1, tablename2
             for cp in compute_pairwise_correlations(db, db_session, tablename1, tablename2):
-                db_session.add(cp)
-                db_session.commit()
+                cps.append(cp)
+
+    print "wrote %d corr pairs" % len(cps)
+        
 
 
     
@@ -132,15 +138,20 @@ def compute_pairwise_correlations(db, db_session, tablename1, tablename2, join_f
 
     join_func = join_func or dist_join
     joinres = join_func(db, tablename1, tablename2, r)
-
+    
     ret = []
     for corr, statname, col1, col2 in test_correlation(joinres):
         agg1 = col1[2] if len(col1) > 2 else None
         agg2 = col2[2] if len(col2) > 2 else None
-        ret.append( CorrelationPair(corr, r, statname,
-                              col1[0], col1[1], agg1,
+        print col1, col2
+        cp = CorrelationPair(corr, r, statname,
+                             col1[0], col1[1], agg1,
                               col2[0], col2[1], agg2,
-                              tmd1, tmd2) )
+                              tmd1, tmd2)
+        db_session.add(cp)
+        db_session.commit()
+        ret.append(cp)
+
     return ret
         
 
@@ -455,6 +466,15 @@ def has_shape(db_session, table):
 
 
 if __name__ == '__main__':
+    from locjoin.analyze.database import *
+    pdb.set_trace()
+    md = Metadata.load_from_tablename(db_session, 'urbanpop')
+
+    joinres = dist_join(db, 'urbanpop', 'wb', 1)
+    #recompute_correlations(db, db_session, 'urbanpop')
+    exit()
+
+    
     from sqlalchemy import *
     from sqlalchemy.orm import scoped_session, sessionmaker
     from sqlalchemy.ext.declarative import declarative_base

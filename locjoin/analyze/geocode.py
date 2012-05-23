@@ -129,8 +129,9 @@ class DBTruckGeocoder(object):
                 result = geocoder.geocode(query, exactly_one=False)
                 self.ncalls += 1
             except Exception as e:
+                print e
                 result = []
-                raise
+
 
         self.cache[query] = pickle.dumps(result)
 
