@@ -232,11 +232,11 @@ def geocode_table(db, tablemd):
         addresses = [row.get('_address', '') for row in rows]
         restrictions = [construct_restriction(user_input, row)
                         for row in rows]
-        rids = (row['id'] for row in rows)
+        rids = [row['id'] for row in rows]
         geocodes = __geocoder__.geocode_block(zip(addresses, restrictions))
 
-        
-        for rid, result in zip(rids, geocodes):
+        for idx, result in enumerate(geocodes):
+            rid = rids[idx] 
             if not result:
                 continue
 

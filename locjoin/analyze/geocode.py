@@ -36,8 +36,10 @@ class DBTruckGeocoder(object):
         for address, restriction in addresses_restrictions:
             ncallsprev = self.ncalls            
             try:
-                yield self.geocode(address, restriction)
+                ret = self.geocode(address, restriction)
+                yield ret
             except Exception as e:
+                print e
                 e = str(e).lower()
                 if 'limit' in e or 'rate' in e:
                     delay *= 1.1
@@ -46,7 +48,10 @@ class DBTruckGeocoder(object):
 
             ncallsmade = self.ncalls - ncallsprev
             if ncallsmade:
+                print 'geocode_block sleep', delay, ncallsmade
                 time.sleep(delay)
+            else: 
+                print 'geocode_block cachehit'
 
     def geocode(self, address, restriction):
         try:
@@ -61,8 +66,6 @@ class DBTruckGeocoder(object):
                 query = self.get_format_string(restriction) % address
 
                 return description, (lat, lon), query
-        except KeyboardInterrupt:
-            return None
         except Exception as e:
             raise
         return None
@@ -93,7 +96,12 @@ class DBTruckGeocoder(object):
 
         if query in self.cache:
             try:
-                return pickle.loads(self.cache[query])
+                ret = pickle.loads(self.cache[query])
+                if ret and isinstance(ret[0], basestring):
+                    return [ret]
+                return ret
+            except KeyboardInterrupt:
+                raise
             except:
                 pass
         
@@ -107,20 +115,28 @@ class DBTruckGeocoder(object):
                 geocoder = geocoders.GeocoderDotUS()
         else:
             geocoder = geocoders.GeoNames()
-
+        
         try:
             result = geocoder.geocode(query, exactly_one=False)
             self.ncalls += 1
-        except:
+            if not result:
+               raise Exception('no result found for %s' % query)
+        except Exception as e:
+            print geocoder, e
+            
             try:
                 geocoder = geocoders.Google()
                 result = geocoder.geocode(query, exactly_one=False)
                 self.ncalls += 1
-            except:
+            except Exception as e:
                 result = []
+                raise
 
         self.cache[query] = pickle.dumps(result)
-        return list(result)
+
+        if result and isinstance(result[0], basestring):
+            result = [result]
+        return result
 
 if __name__ == '__main__':
     geocoder = DBTruckGeocoder()
