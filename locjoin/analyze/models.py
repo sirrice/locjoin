@@ -5,8 +5,10 @@ from sqlalchemy.orm import *
 import sqlalchemy.types as types
 from sqlalchemy.ext.declarative import *
 
-from database import Base
-from location import *        
+from location import *
+
+
+Base = declarative_base()
 
 class Metadata(Base):
     __tablename__ = '__dbtruck_metadata__'

@@ -16,19 +16,15 @@ db = create_engine(settings.DBURI, isolation_level='READ COMMITTED')
 db_session = scoped_session(sessionmaker(autocommit=False,
                                          autoflush=True,
                                          bind=db))
-Base = declarative_base()
-Base.query = db_session.query_property()
-
 
 def init_db():
 
-
-
     from locjoin.analyze.models import Metadata, Annotation, CorrelationPair
-    Base.metadata.bind = db
-    Base.metadata.create_all()
-    Base.metadata.reflect()
-
+    classes = [Metadata, Annotation, CorrelationPair]
+    metadata = MetaData()
+    metadata.bind = db
+    metadata.tables = dict([(k.__tablename__, k.__table__)
+                            for k in classes])
     return Base
 
 
@@ -37,13 +33,13 @@ def new_db(autocommit=True):
     db_session = scoped_session(sessionmaker(autocommit=autocommit,
                                              autoflush=True,
                                              bind=db))
-    Base = declarative_base()
-    Base.query = db_session.query_property()
 
     from locjoin.analyze.models import Metadata, Annotation, CorrelationPair
-    Base.metadata.bind = db
-    Base.metadata.create_all()
-    Base.metadata.reflect()
+    classes = [Metadata, Annotation, CorrelationPair]
+    metadata = MetaData()
+    metadata.bind = db
+    metadata.tables = dict([(k.__tablename__, k.__table__)
+                            for k in classes])
 
     return db, db_session
 
