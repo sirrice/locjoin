@@ -3,7 +3,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import *
 import locjoin.settings as settings
 
-db = create_engine(settings.DBURI)
+db = create_engine(settings.DBURI, isolation_level='serializable')
 db_session = scoped_session(sessionmaker(autocommit=False,
                                          autoflush=True,
                                          bind=db))

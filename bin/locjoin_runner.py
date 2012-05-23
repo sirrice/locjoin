@@ -105,6 +105,12 @@ def main_runner(db, session, processes):
 
 
 def execute_function(fname, args, kwargs, task_id, queue):
+    # from sqlalchemy import *
+    # import locjoin.settings as settings
+    # db = create_engine(settings.DBURI, isolation_level='serializable')
+    # db_session = sessionmaker(autocommit=False,
+    #                           autoflush=True,
+    #                           bind=db)
     from locjoin.analyze.database import *
     init_db()
     session = db_session
