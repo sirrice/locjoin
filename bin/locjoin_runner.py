@@ -41,8 +41,6 @@ def main_runner(db, session, processes):
     process_limit = 5
 
 
-    session.execute('set transaction isolation level repeatable read')
-
     while True:
 
         # wait for results
@@ -61,6 +59,7 @@ def main_runner(db, session, processes):
                     print "setting done = true, running = false"
                     session.execute('update __dbtruck_jobs__ set done = true, running = false where id = :id',
                                     {'id' : task_id})
+                session.commit()
             except Empty:
                 time.sleep(0.05)
 
@@ -74,6 +73,7 @@ def main_runner(db, session, processes):
                            where dj2.running = false and done = false)
                 returning id, fname, args, kwargs;"""
         rows = session.execute(q).fetchall()
+        session.commit()
 
         for id, fname, args, kwargs in rows:
             try:
@@ -183,5 +183,6 @@ if __name__ == '__main__':
     check_job_table(db)
 
     db_session.execute('update __dbtruck_jobs__ set running = false where done = false')
+    db_session.commit()
     
     main(db, db_session)
