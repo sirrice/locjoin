@@ -99,7 +99,6 @@ def main_runner(db, session, processes):
                 raise
             except:
                 traceback.print_exc()
-                session.rollback()
                 
         time.sleep(0.5)
 
@@ -111,8 +110,8 @@ def execute_function(fname, args, kwargs, task_id, queue):
     # db_session = sessionmaker(autocommit=False,
     #                           autoflush=True,
     #                           bind=db)
-    from locjoin.analyze.database import *
-    init_db()
+    from locjoin.analyze.database import new_db
+    db, session = new_db()
     session = db_session
     try:
         if fname == 'add_table':
@@ -175,8 +174,10 @@ def _recompute_corr_pairs(db, db_session, tablename):
 
 
 if __name__ == '__main__':
-    from locjoin.analyze.database import *
-    init_db()
+    
+    from locjoin.analyze.database import new_db
+    db, db_session = new_db()
+    #init_db()
     check_job_table(db)
 
     db_session.execute('update __dbtruck_jobs__ set running = false where done = false')
