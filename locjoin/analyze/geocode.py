@@ -32,7 +32,7 @@ class DBTruckGeocoder(object):
             pass
 
     def geocode_block(self, addresses_restrictions):
-        delay = 0.05
+        delay = 0.015
         for address, restriction in addresses_restrictions:
             ncallsprev = self.ncalls            
             try:
@@ -107,12 +107,13 @@ class DBTruckGeocoder(object):
         
         if re_addr2.search(address) and restriction:
             rand = random.random()
-            if rand < 0.4:
+            if rand < 0.5:
                 geocoder = geocoders.Yahoo(settings.YAHOO_APPID)
-            elif rand < 0.8:
-                geocoder = geocoders.Bing(settings.BING_APIKEY)
+                #elif rand < 0.8:
             else:
-                geocoder = geocoders.GeocoderDotUS()
+                geocoder = geocoders.Bing(settings.BING_APIKEY)
+            #else:
+            #    geocoder = geocoders.GeocoderDotUS()
         else:
             geocoder = geocoders.GeoNames()
         
