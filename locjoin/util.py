@@ -1,19 +1,26 @@
-def check_job_table(db):
-    try:
-        db.execute('select * from __dbtruck_jobs__ limit 1').fetchall()
-    except:
-        q = """
-        create table __dbtruck_jobs__(
-          id serial,
-          fname varchar(128),
-          args text null,
-          kwargs text null,
-          running bool default false,
-          done bool default false,
-          lastrun timestamp default current_timestamp
-        )        
-        """
-        db.execute(q)
+
+
+def get_user_tables(session):
+    import sqlalchemy as sa
+    md = sa.MetaData(bind=session.bind)
+    md.reflect()
+
+    ret = []
+    for tablename, schema in md.tables.iteritems():
+        if not is_system_table(tablename):
+            ret.append(tablename)
+    return ret
+
+def is_system_table(tablename):
+    GEO_COLUMNS = ['spatial_ref_sys']
+    if '__dbtruck' in tablename:
+        return True
+    if tablename.endswith('__annotation__'):
+        return True
+    if tablename in GEO_COLUMNS:
+        return True
+    return False
+    
 
 
 def to_utf(v):
