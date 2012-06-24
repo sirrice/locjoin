@@ -20,5 +20,6 @@ setup(name="locjoin",
       scripts = ['bin/locjoin_analyze.py', 'bin/locjoin_correlate.py', 'bin/locjoin_runner.py'],
       package_data = { 'locjoin' : ['data/*'] },
       install_requires = ['bsddb3', 'xlrd', 'pyxl', 'argparse', 'DateUtils', 
-                          'geopy', 'openpyxl', 'requests', 'pyquery', 'geoalchemy', 'sqlalchemy'],
+                          'geopy', 'openpyxl', 'requests', 'pyquery', 'geoalchemy', 'sqlalchemy',
+                          'shapely', 'shapefile'],
       keywords= "library db join location analyze")
