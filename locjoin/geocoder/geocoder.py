@@ -20,17 +20,23 @@ where DATA may be tuples of either
 import re
 import pickle
 import time
+import pdb
+import random
+import traceback
 from sqlalchemy import *
 from sqlalchemy.orm import *
 from geopy import geocoders
 
 from locjoin.util import to_utf
 from locjoin.settings import GEOCACHEFILE
+import locjoin.settings as settings
 from locjoin.geocoder.models import GeocoderTable
+from locjoin.geocoder.local import *
 from locjoin.shapes.models import *
 
+# looks like address
+re_addr2 = re.compile(r'^\s*\d{1,6}(\s+[a-zA-Z\-]+){1,3}')
 
-re_addr2 = re.compile(r'^\s*\d{1,6}(\s+[a-zA-Z\-]+){1,3}\s*$')
 
 LATLON = 0
 SHAPE = 1
@@ -53,7 +59,7 @@ class Geocoder(object):
         @param loc location record
         @return iterator of (row_id, (loctype, latlon or shapeid))
         """
-
+        print "geocoding %s" % loc
         try:
             georow = self.session.query(GeocoderTable).filter(GeocoderTable.locid == loc.id).one()
         except:
@@ -108,12 +114,24 @@ class AddressGeocoder(Geocoder):
         """
         Geocoder.__init__(self, *args, **kwargs)
         self.MINDELAY = 0.01
+        self.MAXDELAY = 0.5
         
         fname = GEOCACHEFILE
+        self.init_cache(fname)
+
+        try:
+            self.local_geocoder = LocalAddrGeocoder()
+        except Exception as e:
+            traceback.print_exc()
+            self.local_geocoder = None
+
+
+    def init_cache(self, fname):
         try:
             self.cache = bsddb3.hashopen(fname)
         except:
             self.cache = {}
+            
         try:
             self.ncalls = int(self.cache.get('__ncalls__', '0'))
         except:
@@ -128,6 +146,10 @@ class AddressGeocoder(Geocoder):
     def geocode_batch(self, addresses):
         delay = self.MINDELAY
         for addr in addresses:
+            if not addr:
+                yield None
+                continue
+            
             ncallsprev = self.ncalls            
 
             try:
@@ -140,7 +162,7 @@ class AddressGeocoder(Geocoder):
             except Exception as e:
                 e = str(e).lower()
                 if 'limit' in e or 'rate' in e:
-                    delay *= 1.1
+                    delay = min(self.MAXDELAY, delay*1.1)
                     yield None
                 else:
                     raise
@@ -151,15 +173,24 @@ class AddressGeocoder(Geocoder):
 
 
     def get_initial_geocoder(self, address):
-        if re_addr2.search(address):
-            rand = random.random()
+        # if the address looks well formed, 
+        # use the tiger geocode database if possible, otherwise choose between
+        # yahoo and bing
+        if True or re_addr2.search(address):
+            rand = random.random()            
 
-            if rand < 0.5:
-                geocoder = geocoders.Yahoo(settings.YAHOO_APPID)
+            if self.local_geocoder and len(address.split(',')) >= 3 and rand < 0.1:
+                geocoder = self.local_geocoder
+
             else:
-                geocoder = geocoders.Bing(settings.BING_APIKEY)
+                rand = random.random()
+                if rand < 0.5:
+                    geocoder = geocoders.Yahoo(settings.YAHOO_APPID)
+                else:
+                    geocoder = geocoders.Bing(settings.BING_APIKEY)
 
         else:
+
             geocoder = geocoders.GeoNames()
 
         return geocoder
@@ -178,6 +209,8 @@ class AddressGeocoder(Geocoder):
 
         If all else fails, use Google
         """
+        address = address.replace('SOUTH BOSTON', 'BOSTON')
+        
         query = to_utf(address).lower()
 
         if not query:
@@ -197,7 +230,7 @@ class AddressGeocoder(Geocoder):
 
         
         geocoder = self.get_initial_geocoder(address)
-
+        print geocoder, address
 
         try:
             result = geocoder.geocode(query, exactly_one=False)
@@ -205,14 +238,14 @@ class AddressGeocoder(Geocoder):
             if not result:
                raise Exception('no result found for %s' % query)
         except Exception as e:
-            
-            try:
-                geocoder = geocoders.Google()
-                result = geocoder.geocode(query, exactly_one=False)
-                self.ncalls += 1
-            except Exception as e:
-                print e
-                result = []
+            print e
+            # try:
+            #     geocoder = geocoders.Google()
+            #     result = geocoder.geocode(query, exactly_one=False)
+            #     self.ncalls += 1
+            # except Exception as e:
+            #     print e
+            #     result = []
 
 
         self.cache[query] = pickle.dumps(result)
@@ -234,7 +267,7 @@ class ZipcodeGeoder(Geocoder):
         for val in vals:
             try:
                 zipcode = self.session.query(Zipcode).filter(Zipcode.fips == int(val)).one()
-                yield SHAPE, zipcode.shapeptr_id
+                yield SHAPE, zipcode.shape_id
             except:
                 yield None
         
@@ -259,7 +292,7 @@ class StateGeocoder(Geocoder):
         """
         @return iterator of (loctype, latlon or shapeid)
         """
-        Q = """select shapeptr_id
+        Q = """select shape_id
                from __dbtruck_state__ s,  __dbtruck_statename__ sn
                where s.fips = sn.fips and
                levenshtein(name, %s) < 1 + 0.2*char_length(name)
@@ -281,7 +314,7 @@ class CountyGeocoder(Geocoder):
         @return iterator of (loctype, latlon or shapeid)
         """
         Q = """
-        select c.shapeptr_id
+        select c.shape_id
         from __dbtruck_county__ as c, __dbtruck_state__ as s,
              __dbtruck_countyname__ as cn, __dbtruck_statename__ as sn
         where c.fips = cn.fips and s.fips = sn.fips and c.state_fips = s.fips and

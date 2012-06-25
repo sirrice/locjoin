@@ -5,7 +5,7 @@ from sqlalchemy.orm import *
 from geoalchemy import *
 
 from locjoin.metadata.models import LocationMetadata as LMD
-from locjoin.shapes.models import ShapePtr
+from locjoin.shapes.models import Shape
 from locjoin.settings import DBURI
 import locjoin.meta as meta
 from locjoin import init_model
@@ -43,15 +43,12 @@ def get_table_annotation(tablename):
 
             latlon = GeometryColumn(Point(2), nullable=True)
             shape_id = Column(Integer,
-                              ForeignKey('%s.id' % ShapePtr.__tablename__),
+                              ForeignKey('%s.id' % Shape.__tablename__),
                               nullable=True)
 
-            def shapes(self, session):
-                shapeptr = session.query(ShapePtr).get(self.shape_id)
-                return shapeptr.shapes
-            
-            #shape = relationship('ShapePtr',
-            #primaryjoin='ShapePtr.id==TableAnnotation.shape_id')
+            @property
+            def shape(self):
+                return object_session(self).query(Shape).get(self.shape_id)
 
                 
                 

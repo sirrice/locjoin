@@ -49,28 +49,58 @@ class Table(object):
             traceback.print_exc()
             return []
 
-    def annotations(self, offset=0, limit=10, lmds=None):
+    def annotations(self, offset=0, limit=10, lmds=None, point_only=False):
         try:
             lmds = lmds or self.metadata()
 
             
             ret = []
             for lmd in lmds:
+                if point_only and not lmd.is_point:
+                    continue
                 
                 q = self.session.query(self.annoklass)
                 q = q.filter(self.annoklass.locid==lmd.id)
-                q = q.offset(offset).limit(limit)
+                q = q.offset(offset)
+                if limit is not None:
+                    q = q.limit(limit)
+
                 objs = q.all()
 
                 if lmd.is_point:
                     annos = [geom_to_point(obj.latlon) for obj in objs]
                 else:
-                    annos = [map(geom_to_polygon, obj.shapes(self.session)) for obj in objs]
+                    annos = [geom_to_polygons(obj.shape.shape) for obj in objs]
                 ret.append(annos)
             return ret
         except:
             traceback.print_exc()
             return []
+
+    def latlon_counts(self, lmd_id, ngrid=50, agg=None):
+        try:
+            if agg is None:
+                agg = 'avg(t.av_total)'
+            q = """select
+                      (st_x(latlon)*%s)::int/%s. as lat,
+                      (st_y(latlon)*%s)::int/%s. as lon,
+                      %s as agg
+               from %s as t, %s__annotation__ as a
+               where a.locid = :loc_id and a.rid = t.id
+               group by lat, lon
+               having count(*) > 4 and %s is not null
+               order by agg desc;""" 
+
+            lmd = self.session.query(LMD).get(lmd_id)
+            q = q % (ngrid, ngrid, ngrid, ngrid, agg, lmd.tname, lmd.tname, agg)
+            print q
+            rows = self.session.execute(q, {'loc_id' : lmd_id}).fetchall()
+            rows = map(tuple, rows)
+            return rows
+        except:
+            traceback.print_exc()
+            return []
+
 
     def annotated_rows(self, lmd, offset=0, limit=10, cols=None):
         try:
@@ -114,7 +144,7 @@ class Table(object):
                 if is_point:
                     d[lmd].append(geom_to_point(row[-1]))
                 else:
-                    polygon = geom_to_polygon(row[-1])
+                    polygon = geom_to_polygons(row[-1])
                     d[lmd].append(polygon)
 
                 prev_d = d

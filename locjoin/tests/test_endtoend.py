@@ -28,5 +28,5 @@ if __name__ == '__main__':
     table = Table(meta.session, 'realestate_small')
     lmd = table.metadata()[-1]
     print table.annotated_rows(lmd, limit=1, cols=['zipcode'])
-    annos = table.annotations()
-    pdb.set_trace()
+    print table.annotations(limit=1)[0]
+

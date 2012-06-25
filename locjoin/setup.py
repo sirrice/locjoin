@@ -24,7 +24,7 @@ if __name__ == '__main__':
         q = 'really reset database?  Y continues, everything else aborts > '
         reset = raw_input(q) == 'Y'
         
-    klasses = [Shape, ShapePtr,
+    klasses = [Shape,
                State, StateName,
                County, CountyName,
                Zipcode, GeocoderTable,

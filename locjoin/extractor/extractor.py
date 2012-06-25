@@ -73,17 +73,21 @@ class Extractor(object):
     def __init__(self, session):
         self.session = session
 
-    def __call__(self, tablename):
+    def __call__(self, tablename, lmd_ids=None):
         """
         look up all LocationMetaData objects relating to this table and
         call the appropriate geocoders for them
         """
 
-        q = LMD.current(meta.session)
-        q = q.filter(LMD.tname == tablename)
-        q = q.order_by(asc(LMD.loc_type))
-        lmds = q.all()
-
+        if lmd_ids is not None:
+            lmds = self.session.query(LMD).filter(LMD.id.in_(lmd_ids)).all()
+        else:
+            q = LMD.current(meta.session)
+            q = q.filter(LMD.tname == tablename)
+            q = q.order_by(asc(LMD.loc_type))
+            lmds = q.all()
+            
+        print "extracting from ", map(str,lmds)
         annoklass = get_table_annotation(tablename)
         
         for lmd in lmds:

@@ -64,8 +64,11 @@ class LocationMetadata(Base):
 
     id = Column(Integer, primary_key=True)
     tname = Column(String, nullable=False)
+    col_name = Column(String, nullable=False)
+    
     loc_type = Column(Integer, nullable=False)
     extract_type = Column(Integer, nullable=False)
+    
     fmt = Column(String)
     source = Column(Integer, default=LocSource.AUTO)
     deleted = Column(Boolean, default=False)  # let's never actually delete
@@ -77,10 +80,6 @@ class LocationMetadata(Base):
     @property
     def is_point(self):
         return not self.is_shape
-
-    @property
-    def col_name(self):
-        return LocType.to_str(self.loc_type)
 
     def __str__(self):
         return self.col_name

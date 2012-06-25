@@ -56,9 +56,10 @@ def create_metadata_from_user_inputs(session, tablename, user_inputs):
             lmd = LMD()
 
         lmd.tname = tablename
+        lmd.col_name = user_input['col_name']
         lmd.loc_type = user_input['loc_type']
         lmd.extract_type = ExtractType.FMT
-        lmd.fmt = user_input['format']
+        lmd.fmt = user_input['format'].strip()
         lmd.source = LocSource.USER
 
 
@@ -75,6 +76,9 @@ def update_metadata(session, tablename, user_lmds, source=-1):
     MDs with ID values is updated
     MDs without ID value is added
     """
+    # q = "select id, fmt, source from %s where tablename = :tn and deleted = false"
+    # rows = self.session.execute(q, {'tn' : tablename}).fetchall()
+    
     q = LMD.current(session).filter(LMD.tname == tablename)
     resproxy = q.all()
     existing_lmds = [res for res in resproxy]
@@ -82,7 +86,7 @@ def update_metadata(session, tablename, user_lmds, source=-1):
     if not existing_lmds:
         session.add_all(user_lmds)
         session.commit()
-        return
+        return []
 
     if not user_lmds:
         for lmd in existing_lmds:
@@ -90,15 +94,16 @@ def update_metadata(session, tablename, user_lmds, source=-1):
                 lmd.deleted = True
         session.add_all(existing_lmds)
         session.commit()
-        return
+        return []
 
     if source == -1:
         source = max([lmd.source for lmd in user_lmds])
 
     if max([lmd.source for lmd in existing_lmds]) > source:
-        return
+        return []
 
 
+    existing_id_to_lmd = dict([(lmd.id, lmd) for lmd in existing_lmds])
     user_ids = set([lmd.id for lmd in user_lmds if lmd.id is not None])
     existing_ids = set([lmd.id for lmd in existing_lmds])
     rm_ids = existing_ids.difference(user_ids)
@@ -108,7 +113,13 @@ def update_metadata(session, tablename, user_lmds, source=-1):
     rm_lmds = filter(lambda lmd: lmd.id in rm_ids, existing_lmds)
     updated_lmds = [lmd for lmd in user_lmds if lmd.id in updated_ids]
     new_lmds = [lmd for lmd in user_lmds if lmd.id is None]
-    
+
+    # of the updated lmds, which need to be re-processed?
+    reprocess = list(new_lmds)
+    for lmd in updated_lmds:
+        if existing_id_to_lmd[lmd.id].fmt != lmd.fmt:
+            reprocess.append(lmd)
+
 
     for lmd in rm_lmds:
         lmd.deleted = True
@@ -116,9 +127,8 @@ def update_metadata(session, tablename, user_lmds, source=-1):
     session.add_all(user_lmds)
     session.commit()
 
-    return (rm_lmds, updated_lmds, new_lmds)
 
-
+    return reprocess
 
 if __name__ == '__main__':
     from locjoin.settings import DBURI

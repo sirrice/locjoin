@@ -26,8 +26,6 @@ Base = declarative_base(metadata=metadata)
 
 
 def load_table_class(tablename):
-    from locjoin.metadata.models import LocationMetadata as LMD
-    from locjoin.shapes.models import ShapePtr 
     if tablename in table_cache:
         return table_cache
 

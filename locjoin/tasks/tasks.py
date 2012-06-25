@@ -47,8 +47,8 @@ def run_pipeline(session, table):
 def run_detector(session, table):
     add_job(session, 'run_detector', [table])
 
-def run_extractor(session, table):
-    add_job(session, 'run_extractor', [table])
+def run_extractor(session, table, **kwargs):
+    add_job(session, 'run_extractor', [table], kwargs)
 
 def recompute_corr_pairs(session, tablename):
     add_job(session, 'recompute_corr_pairs', [tablename], {})

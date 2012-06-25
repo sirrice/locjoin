@@ -13,12 +13,15 @@ def geom_to_point(col):
     pt = swkb.loads(s)
     return (pt.x, pt.y)
 
-def geom_to_polygon(col):
+def geom_to_polygons(col):
     try:
         s = str(col.geom_wkb)
     except:
         s = str(col)
 
-    pts = swkb.loads(s)
-    coords = pts.exterior.coords
-    return zip(coords.xy[0], coords.xy[1])
+    mp = swkb.loads(s)
+    ret = []
+    for g in mp:
+        coords = g.exterior.coords
+        ret.append(zip(coords.xy[0], coords.xy[1]))
+    return ret

@@ -322,10 +322,10 @@ def _run_detector(db, session, tablename):
 
 
         
-def _run_extractor(db, session, tablename):
+def _run_extractor(db, session, tablename, ids=None):
     from locjoin.extractor.extractor import Extractor    
     extractor = Extractor(session)
-    extractor(tablename)
+    extractor(tablename, lmd_ids=ids)
 
     
 
@@ -380,5 +380,5 @@ if __name__ == '__main__':
     session.commit()
 
     
-    cron = Cron(session, process_limit=10, parallelize=False)
+    cron = Cron(session, process_limit=10, parallelize=True)
     cron()
