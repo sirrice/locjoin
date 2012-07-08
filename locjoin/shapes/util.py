@@ -1,3 +1,5 @@
+from operator import mul
+
 import shapely
 import shapely.geometry as sgeo
 import shapely.wkt as swkt
@@ -25,3 +27,26 @@ def geom_to_polygons(col):
         coords = g.exterior.coords
         ret.append(zip(coords.xy[0], coords.xy[1]))
     return ret
+
+
+def clockwise(points):
+    """ 
+    computes whether the polygon defined by points is
+    clockwise
+    """
+
+    area = 0.
+    for pt1, pt2 in zip(points, points[1:]):
+	area += (pt2[0] - pt1[0]) * (pt2[1] + pt1[1])
+
+    return area > 0
+
+
+def counterclockwise(points):
+    return not clockwise(points)
+
+
+if __name__ == '__main__':
+    
+    print clockwise([[0,0], [1,0], [1,1], [0,1], [0,0]])
+    print clockwise([[0,0], [0,1], [1,1], [1,0], [0,0]])
