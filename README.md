@@ -1,3 +1,22 @@
+# Setup
+
+Create database tables
+
+	python locjoin/setup.py
+
+Load shape files into database tables
+
+	python data/states/munge.py
+	python data/5zip/munge.py
+	python data/counties/munge.py
+
+Start cron job
+
+	python locjoin/tasks/cron.py
+
+
+
+
 Modules
 
 
