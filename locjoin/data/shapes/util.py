@@ -5,6 +5,7 @@ from shapely.geometry import MultiPolygon, Polygon
 
 from sqlalchemy import *
 from sqlalchemy.orm import *
+from geoalchemy import WKTSpatialElement
 
 from locjoin.shapes.util import clockwise
 
@@ -13,9 +14,10 @@ def get_wkt(shape):
     parts = list(shape.parts)
 
     for start, end in zip(parts, parts[1:]+[len(shape.points)]):
-        pts = list(map(tuple,shape.points[start:end]))
+	pts = list(shape.points[start:end])
 	is_not_hole = clockwise(pts + [pts[0]])
 
+	pts = [(x, y) for y, x in pts]
 	if is_not_hole:
 	    polygons.append( (pts, []) )
 	else:

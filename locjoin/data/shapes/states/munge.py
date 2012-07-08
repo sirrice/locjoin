@@ -32,7 +32,6 @@ for idx in xrange(r.numRecords):
     print name
 
     shapeobj = Shape(get_wkt(shape))
-    continue
 
     names = [StateName(fips=statefp, name=name),
              StateName(fips=statefp, name=shortname)]
